@@ -1,5 +1,5 @@
 
-## 📦 Installation
+## 📦 Installation (colab의 경우 git clone만 해도 될수도)
 
 0.  *** puzzlemix repo 참고 ***
 1.  **리포지토리 클론:**
