@@ -16,4 +16,10 @@ figures/.DS_Store
 !imagenet/*
 imagenet/checkpoint/*
 output
-checkpoint
+checkpointdataset/
+output/
+*.zip
+*.tar.gz
+__pycache__/
+*.pth
+*.pth.tar

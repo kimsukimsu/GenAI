@@ -486,6 +486,36 @@ def validate(val_loader, model, log, fgsm=False, eps=4, rand_init=False, mean=No
 
 best_acc = 0
 
+#추가한 함수 
+def get_blend_ratio(epoch, total_epochs, strategy='linear'):
+    """
+    현재 Epoch에 따라 Blended 이미지의 비율(0.0 ~ 1.0)을 반환합니다.
+    0.0: 100% Original
+    1.0: 100% Blended
+    """
+    # 예시 1: 선형 증가 (Linear) - 처음부터 끝까지 서서히 증가
+    if strategy == 'linear':
+        return epoch / total_epochs
+    
+    # 예시 2: 계단식 (Step) - 특정 Epoch 이후에 급격히 증가
+    elif strategy == 'step':
+        if epoch < 100: return 0.0  # 100 Epoch까지는 Original만
+        if epoch < 200: return 0.5  # 200 Epoch까지는 반반
+        return 1.0                  # 그 이후는 Blended 위주
+        
+    # 예시 3: 웜업 후 증가 (Warmup) - 초반엔 Original만 보다가 서서히 증가 (추천)
+    elif strategy == 'warmup':
+        warmup_epochs = 50
+        if epoch < warmup_epochs:
+            return 0.0
+        else:
+            ratio = (epoch - warmup_epochs) / (total_epochs - warmup_epochs)
+            return min(1.0, ratio)
+            
+    return 0.5 # 기본값
+
+#----------------------------------
+
 
 def main():
     # set up the experiment directories
@@ -598,6 +628,21 @@ def main():
     test_acc = []
 
     for epoch in range(args.start_epoch, args.epochs):
+        #추가한 내용들
+        # 1. 현재 Epoch에 맞는 혼합 비율 계산 (여기서는 'warmup' 전략 사용)
+        current_blend_ratio = get_blend_ratio(epoch, args.epochs, strategy='warmup')
+        if epoch % args.print_freq == 0:
+            print_log(f"-> Curriculum: Epoch {epoch}, Blended Ratio: {current_blend_ratio:.2f}", log)
+
+        # 2. Dataset에 비율 적용
+        # train_loader.dataset이 우리가 수정한 'CurriculumDataset'인지 확인하고 적용
+        if hasattr(train_loader.dataset, 'set_blend_ratio'):
+            train_loader.dataset.set_blend_ratio(current_blend_ratio)
+            # 로그 출력 (잘 적용되고 있는지 확인용)
+            if (epoch % 10 == 0) or (epoch < 5): # 초반 5 epoch과 매 10 epoch마다 출력
+                print_log(f" -> [Curriculum] Epoch: {epoch}, Blend Ratio: {current_blend_ratio:.4f}", log)
+        # ==========================================
+
         current_learning_rate = adjust_learning_rate(optimizer, epoch, args.gammas, args.schedule)
         if epoch == args.schedule[0]:
             args.clean_lam == 0
@@ -665,6 +710,7 @@ def main():
 
     if not args.log_off:
         log.close()
+
 
 
 if __name__ == '__main__':

@@ -5,6 +5,42 @@ from torch.utils.data.sampler import SubsetRandomSampler
 import numpy as np
 from functools import reduce
 from operator import __or__
+import random
+
+class CurriculumDataset(torch.utils.data.Dataset):
+    def __init__(self, org_dataset, aug_dataset):
+        """
+        org_dataset: 원본 데이터셋 (예: ImageFolder)
+        aug_dataset: 증강/혼합된 데이터셋 (예: ImageFolder)
+        """
+        self.org_dataset = org_dataset
+        self.aug_dataset = aug_dataset
+        self.blend_ratio = 0.0  # 0.0: Original 100%, 1.0: Augmented 100%
+        
+        # Sampler 생성을 위해 targets와 classes 정보를 원본에서 가져옴
+        self.targets = np.array(org_dataset.targets) 
+        self.classes = org_dataset.classes
+
+    def set_blend_ratio(self, ratio):
+        """main.py에서 Epoch마다 이 함수를 호출하여 비율을 변경함"""
+        self.blend_ratio = ratio
+
+    def __len__(self):
+        # 데이터셋의 크기는 원본 데이터셋의 크기를 따름
+        return len(self.org_dataset)
+
+    def __getitem__(self, idx):
+        # [핵심 로직] blend_ratio 확률보다 작으면 Augmented(Blended) 이미지 반환
+        if random.random() < self.blend_ratio:
+            # 인덱스 안전장치 (혹시 aug 데이터셋이 더 작을 경우 대비)
+            if idx < len(self.aug_dataset):
+                return self.aug_dataset[idx]
+            else:
+                return self.org_dataset[idx]
+        else:
+            # 그 외의 경우 원본 이미지 반환
+            return self.org_dataset[idx]
+
 
 
 def load_data_subset(batch_size,
@@ -66,27 +102,7 @@ def load_data_subset(batch_size,
         num_classes = 10
 
     elif dataset == 'cifar100':
-        # train_data = datasets.CIFAR100(data_target_dir,
-        #                                train=True,
-        #                                transform=train_transform,
-        #                                download=True)
-        # test_data = datasets.CIFAR100(data_target_dir,
-        #                               train=False,
-        #                               transform=test_transform,
-        #                               download=True)
-        # num_classes = 100
-
-        # train_root = data_train_dir
-        # test_root = data_test_dir
-        # if not os.path.exists(train_root) or not os.path.exists(test_root):
-        #     raise FileNotFoundError(f"'check the file path")
-
-        # train_data = datasets.ImageFolder(train_root, transform=train_transform)
-        # test_data = datasets.ImageFolder(test_root, transform=test_transform)
-        
-        # num_classes = len(train_data.classes) # 100
-        # print(f"Found {num_classes} classes in {train_root}")
-        from torch.utils.data import ConcatDataset
+        #from torch.utils.data import ConcatDataset
         
         train_root_1 = data_train_org_dir
         train_root_2 = data_train_aug_dir
@@ -107,11 +123,8 @@ def load_data_subset(batch_size,
             raise ValueError("Class list/order mismatch between the two train directories. "
                              "This will cause incorrect labels.")
             
-        train_data = ConcatDataset([train_data_1, train_data_2])
-        print(f"Combined two train datasets. Total size: {len(train_data)}")
-
-        train_data.targets = np.concatenate([train_data_1.targets, train_data_2.targets])
-        train_data.classes = train_data_1.classes  
+        train_data = CurriculumDataset(train_data_1, train_data_2) # 기존: train_data = ConcatDataset([train_data_1, train_data_2])
+        print(f"Created CurriculumDataset. Total size (per epoch): {len(train_data)}")
         
         test_data = datasets.ImageFolder(test_root, transform=test_transform)
         
