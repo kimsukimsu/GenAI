@@ -33,7 +33,7 @@
 
 아래는 `preactresnet18` 아키텍처를 사용하여 CIFAR-100 데이터셋으로 모델을 학습시키는 예시 명령어입니다.
 
-Mixing Strategies : ['warmup', 'linear', 'step', 'concat']
+Mixing Strategies : ['warmup', 'linear', 'step', 'concat', 'no_aug']
 
 ```
 bash script/train.sh
