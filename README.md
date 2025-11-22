@@ -1,11 +1,11 @@
 
-## 📦 Installation (colab의 경우 git clone만 해도 될수도)
+## 📦 Installation
 
 0.  *** puzzlemix repo 참고 ***
 1.  **리포지토리 클론:**
     ```bash
-    git clone https://github.com/ai-cho/GDTP.git
-    cd GDTP
+    git clone https://github.com/kimsukimsu/GenAI.git
+    cd GenAI
     ```
 
 2.  **Conda 환경 생성 및 PyTorch 설치:**
@@ -32,7 +32,11 @@
 ## 👟 Training
 
 아래는 `preactresnet18` 아키텍처를 사용하여 CIFAR-100 데이터셋으로 모델을 학습시키는 예시 명령어입니다.
-
+Mixing Strategies
+warmup : 초반에는 원본 데이터 위주로 학습하다가, 점진적으로 생성 데이터의 비율을 늘림
+linear: 0 Epoch부터 학습 종료 시점까지 생성 데이터의 혼합 비율이 선형적으로 증가
+step: 특정 Epoch 구간마다 계단식으로 생성 데이터 비율이 증가
+concat: 원본 데이터와 생성 데이터를 단순 병합
 ```
 bash script/train.sh
 ```
