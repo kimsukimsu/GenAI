@@ -51,7 +51,8 @@ def load_data_subset(batch_size,
                      data_test_dir,
                      labels_per_class=100,
                      valid_labels_per_class=500,
-                     mixup_alpha=1):
+                     mixup_alpha=1,
+                     mix_strategy='concat'):
     '''return datalaoder'''
     ## copied from GibbsNet_pytorch/load.py
     if dataset == 'cifar10':
@@ -102,39 +103,60 @@ def load_data_subset(batch_size,
         num_classes = 10
 
     elif dataset == 'cifar100':
-        #from torch.utils.data import ConcatDataset
+        from torch.utils.data import ConcatDataset
         
         train_root_1 = data_train_org_dir
         train_root_2 = data_train_aug_dir
         test_root = data_test_dir 
 
-        if not os.path.exists(train_root_1) or not os.path.exists(train_root_2):
-            raise FileNotFoundError(f"One of the train directories not found. Check paths.")
+        if not os.path.exists(train_root_1):
+             raise FileNotFoundError(f"Original Train directory not found: {train_root_1}")
+
+        print(f"Loading Original train data from: {train_root_1}")
+        train_data_1 = datasets.ImageFolder(train_root_1, transform=train_transform)
+
+        if mix_strategy == 'no_aug':
+            #Only original 
+            print(">>> Using Strategy: NO AUGMENTATION (Original Data Only)")
+            train_data = train_data_1
+            
+        else:
+            if not os.path.exists(train_root_2):
+                raise FileNotFoundError(f"Augmented Train directory not found: {train_root_2}")
+
+            print(f"Loading Augmented train data from: {train_root_2}")
+            train_data_2 = datasets.ImageFolder(train_root_2, transform=train_transform)
+
+            if train_data_1.classes != train_data_2.classes:
+                raise ValueError("Class list/order mismatch between the two train directories. "
+                                 "This will cause incorrect labels.")
+
+            if mix_strategy == 'concat':
+                print(f">>> Using Strategy: ConcatDataset (Simple Merge)")
+                train_data = ConcatDataset([train_data_1, train_data_2])
+                
+                train_data.targets = np.concatenate([train_data_1.targets, train_data_2.targets])
+                train_data.classes = train_data_1.classes
+                
+            else:
+                #Curriculum : linear, step, warmup
+                print(f">>> Using Strategy: CurriculumDataset (Mode: {mix_strategy})")
+                train_data = CurriculumDataset(train_data_1, train_data_2)
+        
+        print(f"Total train size: {len(train_data)}")
+        
         if not os.path.exists(test_root):
             raise FileNotFoundError(f"Test directory not found: {test_root}")
 
-        print(f"Loading train data from: {train_root_1}")
-        train_data_1 = datasets.ImageFolder(train_root_1, transform=train_transform)
-        
-        print(f"Loading train data from: {train_root_2}")
-        train_data_2 = datasets.ImageFolder(train_root_2, transform=train_transform)
-
-        if train_data_1.classes != train_data_2.classes:
-            raise ValueError("Class list/order mismatch between the two train directories. "
-                             "This will cause incorrect labels.")
-            
-        train_data = CurriculumDataset(train_data_1, train_data_2) # 기존: train_data = ConcatDataset([train_data_1, train_data_2])
-        print(f"Created CurriculumDataset. Total size (per epoch): {len(train_data)}")
-        
         test_data = datasets.ImageFolder(test_root, transform=test_transform)
         
-        num_classes = len(train_data.classes)
+        num_classes = len(train_data.classes) 
         print(f"Found {num_classes} classes total.")
+        
+        n_labels = num_classes
 
     else:
         assert False, 'Do not support dataset : {}'.format(dataset)
-
-    n_labels = num_classes
 
     # random sampler
     def get_sampler(labels, n=None, n_valid=None):

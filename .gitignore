@@ -1,25 +1,37 @@
+# --- 시스템 파일 및 에디터 임시 파일 ---
 *.par.*
 */*
 *.pyc
 *.swp
 */*.swp
 */*.pyc
-!models/*
-models/*.pyc
-!unit_test/*
-!checkpoint/*
-saliency.py
-!imagenet_fast/*
 .DS_Store
-!figures/*
 figures/.DS_Store
+
+# --- 허용할 폴더들 (Whitelist) ---
+!models/*
+!unit_test/*
+!figures/*
 !imagenet/*
-imagenet/checkpoint/*
-output
-checkpointdataset/
+!script/*
+
+# --- 무시할 데이터 및 출력 폴더 ---
+dataset/
+data/
 output/
+checkpoint/
+result/
+workspace/
+
+# --- 파일 확장자 무시 ---
 *.zip
 *.tar.gz
-__pycache__/
 *.pth
 *.pth.tar
+
+# --- 파이썬 캐시 ---
+__pycache__/
+
+# --- 기타 ---
+saliency.py
+imagenet/checkpoint/*

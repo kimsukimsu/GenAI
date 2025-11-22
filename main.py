@@ -141,6 +141,12 @@ parser.add_argument(
     nargs='+',
     default=[0.1, 0.1],
     help='LR is multiplied by gamma on schedule, number of gammas should be equal to schedule')
+parser.add_argument('--mix_strategy', 
+                    type=str, 
+                    default='warmup', 
+                    choices=['concat', 'linear', 'step', 'warmup', 'no_aug'],
+                    help='Strategy: concat, no_aug, [linear, step, warmup]')
+
 
 # Checkpoints
 parser.add_argument('--print_freq',
@@ -493,17 +499,20 @@ def get_blend_ratio(epoch, total_epochs, strategy='linear'):
     0.0: 100% Original
     1.0: 100% Blended
     """
-    # 예시 1: 선형 증가 (Linear) - 처음부터 끝까지 서서히 증가
+    #Linear
     if strategy == 'linear':
         return epoch / total_epochs
     
-    # 예시 2: 계단식 (Step) - 특정 Epoch 이후에 급격히 증가
+    #Ste
     elif strategy == 'step':
-        if epoch < 100: return 0.0  # 100 Epoch까지는 Original만
-        if epoch < 200: return 0.5  # 200 Epoch까지는 반반
-        return 1.0                  # 그 이후는 Blended 위주
+        if epoch < 100: return 0.0  
+        if epoch < 200: return 0.5  
+        return 1.0                  #
+    
+    elif strategy == 'concat':
+        return 
         
-    # 예시 3: 웜업 후 증가 (Warmup) - 초반엔 Original만 보다가 서서히 증가 (추천)
+    #Warmup
     elif strategy == 'warmup':
         warmup_epochs = 50
         if epoch < warmup_epochs:
@@ -512,9 +521,7 @@ def get_blend_ratio(epoch, total_epochs, strategy='linear'):
             ratio = (epoch - warmup_epochs) / (total_epochs - warmup_epochs)
             return min(1.0, ratio)
             
-    return 0.5 # 기본값
-
-#----------------------------------
+    return 0.5 
 
 
 def main():
@@ -555,7 +562,8 @@ def main():
         args.test_dir,
         labels_per_class=args.labels_per_class,
         valid_labels_per_class=args.valid_labels_per_class,
-        mixup_alpha=args.mixup_alpha)
+        mixup_alpha=args.mixup_alpha,
+        mix_strategy=args.mix_strategy)
 
     if args.dataset == 'tiny-imagenet-200':
         stride = 2
@@ -628,19 +636,20 @@ def main():
     test_acc = []
 
     for epoch in range(args.start_epoch, args.epochs):
-        #추가한 내용들
-        # 1. 현재 Epoch에 맞는 혼합 비율 계산 (여기서는 'warmup' 전략 사용)
+
         current_blend_ratio = get_blend_ratio(epoch, args.epochs, strategy='warmup')
         if epoch % args.print_freq == 0:
             print_log(f"-> Curriculum: Epoch {epoch}, Blended Ratio: {current_blend_ratio:.2f}", log)
 
-        # 2. Dataset에 비율 적용
-        # train_loader.dataset이 우리가 수정한 'CurriculumDataset'인지 확인하고 적용
-        if hasattr(train_loader.dataset, 'set_blend_ratio'):
-            train_loader.dataset.set_blend_ratio(current_blend_ratio)
-            # 로그 출력 (잘 적용되고 있는지 확인용)
-            if (epoch % 10 == 0) or (epoch < 5): # 초반 5 epoch과 매 10 epoch마다 출력
-                print_log(f" -> [Curriculum] Epoch: {epoch}, Blend Ratio: {current_blend_ratio:.4f}", log)
+        if args.mix_strategy not in ['concat', 'no_aug']:
+            #Curriculum learning
+            current_blend_ratio = get_blend_ratio(epoch, args.epochs, strategy=args.mix_strategy)
+            
+            if hasattr(train_loader.dataset, 'set_blend_ratio'):
+                train_loader.dataset.set_blend_ratio(current_blend_ratio)
+                
+                if (epoch % 10 == 0) or (epoch < 5):
+                    print_log(f" -> [Curriculum: {args.mix_strategy}] Epoch: {epoch}, Ratio: {current_blend_ratio:.4f}", log)
         # ==========================================
 
         current_learning_rate = adjust_learning_rate(optimizer, epoch, args.gammas, args.schedule)
