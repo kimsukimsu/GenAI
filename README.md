@@ -25,6 +25,7 @@
 3.  **추가 라이브러리 설치:**
     ```bash
     pip install gco-wrapper matplotlib numpy six
+    pip install transformers ftfy regex scipy matplotlib scikit-learn #for pca_clip.py
     ```
 
 ---
@@ -55,3 +56,12 @@ python main.py --dataset cifar100 \
     --gammas 0.1 0.1 \
     --mix_strategy concat
     --train vanilla
+
+아래는 "openai/clip-vit-base-patch32"를 이용하여 original을 기준으로 pca시각화 하는 코드입니다.
+python visualizer.py \
+    --dirs /path/to/original /path/to/blended /path/to/generated \
+    --labels Original Blended Generated \
+    --output distribution_graph.png
+
+
+
