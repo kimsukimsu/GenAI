@@ -58,7 +58,7 @@ python main.py --dataset cifar100 \
     --train vanilla
 
 아래는 "openai/clip-vit-base-patch32"를 이용하여 original을 기준으로 pca시각화 하는 코드입니다.
-python visualizer.py \
+python pca_clip.py \
     --dirs /path/to/original /path/to/blended /path/to/generated \
     --labels Original Blended Generated \
     --output distribution_graph.png
