@@ -66,6 +66,6 @@ python pca_clip.py \
     --dirs /path/to/original /path/to/blended /path/to/generated \
     --labels Original Blended Generated \
     --output distribution_graph.png
-
+```
 
 
