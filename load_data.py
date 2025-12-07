@@ -10,35 +10,33 @@ import random
 class CurriculumDataset(torch.utils.data.Dataset):
     def __init__(self, org_dataset, aug_dataset):
         """
-        org_dataset: 원본 데이터셋 (예: ImageFolder)
-        aug_dataset: 증강/혼합된 데이터셋 (예: ImageFolder)
+        org_dataset: 원본 데이터
+        aug_dataset: augmented 데이터
         """
         self.org_dataset = org_dataset
         self.aug_dataset = aug_dataset
         self.blend_ratio = 0.0  # 0.0: Original 100%, 1.0: Augmented 100%
         
-        # Sampler 생성을 위해 targets와 classes 정보를 원본에서 가져옴
+        #원본 데이터 클래스 유지(single label augmentation)
         self.targets = np.array(org_dataset.targets) 
         self.classes = org_dataset.classes
 
     def set_blend_ratio(self, ratio):
-        """main.py에서 Epoch마다 이 함수를 호출하여 비율을 변경함"""
+        #ratio설정
         self.blend_ratio = ratio
 
     def __len__(self):
-        # 데이터셋의 크기는 원본 데이터셋의 크기를 따름
         return len(self.org_dataset)
 
     def __getitem__(self, idx):
-        # [핵심 로직] blend_ratio 확률보다 작으면 Augmented(Blended) 이미지 반환
+        #blend_ratio보다 작으면Augmented(Blended)
         if random.random() < self.blend_ratio:
-            # 인덱스 안전장치 (혹시 aug 데이터셋이 더 작을 경우 대비)
             if idx < len(self.aug_dataset):
                 return self.aug_dataset[idx]
             else:
                 return self.org_dataset[idx]
         else:
-            # 그 외의 경우 원본 이미지 반환
+            #원본 이미지
             return self.org_dataset[idx]
 
 
