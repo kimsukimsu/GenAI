@@ -637,7 +637,7 @@ def main():
 
     for epoch in range(args.start_epoch, args.epochs):
 
-        current_blend_ratio = get_blend_ratio(epoch, args.epochs, strategy='warmup')
+        current_blend_ratio = get_blend_ratio(epoch, args.epochs, strategy=args.mix_strategy)
         if epoch % args.print_freq == 0:
             print_log(f"-> Curriculum: Epoch {epoch}, Blended Ratio: {current_blend_ratio:.2f}", log)
 
