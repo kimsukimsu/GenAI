@@ -1,3 +1,8 @@
+## Project description
+
+This project is for "Generative AI" class 2025-2
+
+https://github.com/iontail/gdl_term
 
 ## 📦 Installation
 
